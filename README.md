@@ -10,4 +10,4 @@ Aplicación móvil con escáner Bluetooth y conexión a base de datos.
 * **Guadalupe**: Base de Datos (MySQL) y APIs REST (PHP).
 * **Jay & Yafet**: Funcionamiento del Radar BLE, Configuración del Entorno Nativo y Lógica del Radar.
 * **Michel**: Vistas y Experiencia de Usuario (Inicio, Radar, Detalles, Historial).
-* **Alejandro & Yael**: Conexión Backend-Frontend (Axios) y Filtro de Datos del Radar.
+* **Alejandro & Yael**: Conexión Backend-Frontend (Axios) y Filtro de Datos del Radar
