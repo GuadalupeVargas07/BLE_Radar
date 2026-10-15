@@ -5,19 +5,21 @@ import { IonContent, NavController } from '@ionic/angular';
 import { animate, stagger } from 'animejs';
 
 import { Dispositivo } from '../data/modelos';
-import { EscaneoService } from '../services/escaneo.service';
+import { EscaneoService, LecturaGATT } from '../services/escaneo.service';
 import { ObservacionesService } from '../services/observaciones.service';
 import { describirUuid } from '../utils/gatt';
-import { NivelSenal, barrasEncendidas, formatoRssi, hace, nivelSenal, nombreVisible } from '../utils/senal';
+import { DistanciaAproximada, NivelSenal, barrasEncendidas, distanciaAproximada, formatoRssi, hace, nivelSenal, nombreVisible } from '../utils/senal';
 
 interface VistaDetalle {
   d: Dispositivo;
   nombre: string;
   nivel: NivelSenal;
+  distancia: DistanciaAproximada;
   barras: boolean[];
   rssiTexto: string;
   visto: string;
   servicios: { corto: string; nombre: string }[];
+  lecturas: LecturaGATT[];
 }
 
 @Component({
@@ -36,6 +38,10 @@ export class DetallePage {
 
   vista?: VistaDetalle;
   guardando = false;
+  leyendo = false;
+  lecturaRealizada = false;
+  errorLectura = '';
+  readonly describirUuid = describirUuid;
   aviso?: { texto: string; tipo: 'ok' | 'error' };
 
   private cierreAviso?: ReturnType<typeof setTimeout>;
@@ -48,10 +54,12 @@ export class DetallePage {
         d,
         nombre: nombreVisible(d.nombre),
         nivel: nivelSenal(d.rssi),
+        distancia: distanciaAproximada(d.rssi),
         barras: barrasEncendidas(d.rssi),
         rssiTexto: formatoRssi(d.rssi),
         visto: hace(d.visto),
         servicios: d.uuids.map(describirUuid),
+        lecturas: [],
       };
     }
   }
@@ -78,6 +86,22 @@ export class DetallePage {
       this.mostrarAviso('No se pudo guardar. Revisa la conexión con el servidor.', 'error');
     } finally {
       this.guardando = false;
+    }
+  }
+
+  async conectarYLeer() {
+    if (!this.vista || this.leyendo) return;
+    this.leyendo = true;
+    this.errorLectura = '';
+    this.lecturaRealizada = false;
+    this.vista.lecturas = [];
+    try {
+      this.vista.lecturas = await this.escaneo.conectarYLeer(this.vista.d.id);
+      this.lecturaRealizada = true;
+    } catch (error) {
+      this.errorLectura = error instanceof Error ? error.message : String(error);
+    } finally {
+      this.leyendo = false;
     }
   }
 

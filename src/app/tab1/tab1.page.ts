@@ -10,13 +10,14 @@ import { EscaneoService } from '../services/escaneo.service';
 import { AjustesService } from '../services/ajustes.service';
 import { ObservacionesService } from '../services/observaciones.service';
 import { aplicarFiltros, contarFiltrosActivos } from '../utils/filtros';
-import { NivelSenal, barrasEncendidas, formatoRssi, nivelSenal, nombreVisible, posicionRadar, rellenoSlider } from '../utils/senal';
+import { DistanciaAproximada, NivelSenal, barrasEncendidas, distanciaAproximada, formatoRssi, nivelSenal, nombreVisible, posicionRadar, rellenoSlider } from '../utils/senal';
 
 /** Lo que pinta la plantilla por cada dispositivo (ya calculado, para no recalcular en cada ciclo). */
 interface Vista {
   d: Dispositivo;
   nombre: string;
   nivel: NivelSenal;
+  distancia: DistanciaAproximada;
   barras: boolean[];
   rssiTexto: string;
   x: number;
@@ -33,6 +34,8 @@ export class Tab1Page implements OnDestroy {
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private zona = inject(NgZone);
   private escaneo = inject(EscaneoService);
+  readonly estadoBluetooth$ = this.escaneo.estadoBluetooth$;
+  readonly errorEscaneo$ = this.escaneo.error$;
   private ajustes = inject(AjustesService);
   private observaciones = inject(ObservacionesService);
 
@@ -65,7 +68,13 @@ export class Tab1Page implements OnDestroy {
   async ionViewDidEnter() {
     this.suscripcion ??= this.escaneo.dispositivos$.subscribe((lista) => this.actualizar(lista));
     this.iniciarAnimaciones();
-    if (!this.escaneo.escaneando) await this.escaneo.iniciar();
+    if (!this.escaneo.escaneando) {
+      try {
+        await this.escaneo.iniciar();
+      } catch (error) {
+        console.error('No se pudo iniciar el escaneo BLE:', error);
+      }
+    }
     this.escaneando = this.escaneo.escaneando;
     if (this.escaneando) this.reanudarAnimaciones();
   }
@@ -83,15 +92,20 @@ export class Tab1Page implements OnDestroy {
 
   // ------------------------------------------------------------------ acciones
   async alternarEscaneo() {
-    if (this.escaneo.escaneando) {
-      await this.escaneo.detener();
-      this.barrido?.pause();
-      this.pulso?.pause();
-    } else {
-      await this.escaneo.iniciar();
-      this.reanudarAnimaciones();
+    try {
+      if (this.escaneo.escaneando) {
+        await this.escaneo.detener();
+        this.barrido?.pause();
+        this.pulso?.pause();
+      } else {
+        await this.escaneo.iniciar();
+        this.reanudarAnimaciones();
+      }
+    } catch (error) {
+      console.error('No se pudo cambiar el estado del escaneo BLE:', error);
+    } finally {
+      this.escaneando = this.escaneo.escaneando;
     }
-    this.escaneando = this.escaneo.escaneando;
   }
 
   limpiarFiltros() {
@@ -158,6 +172,7 @@ export class Tab1Page implements OnDestroy {
         d,
         nombre: nombreVisible(d.nombre),
         nivel: nivelSenal(d.rssi),
+        distancia: distanciaAproximada(d.rssi),
         barras: barrasEncendidas(d.rssi),
         rssiTexto: formatoRssi(d.rssi),
         x,

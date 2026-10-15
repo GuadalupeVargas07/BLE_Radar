@@ -42,9 +42,11 @@ export class BienvenidaPage implements OnDestroy {
     try {
       const ok = await this.escaneo.solicitarPermisos();
       if (ok) await this.irAlRadar();
-      else this.error = 'Sin permisos no se puede escanear. Actívalos en los ajustes del teléfono.';
-    } catch {
-      this.error = 'No se pudieron solicitar los permisos.';
+      else this.error = this.escaneo.bluetoothActivo === false
+        ? 'Bluetooth está apagado. Actívalo en los ajustes rápidos del teléfono.'
+        : 'Sin permisos no se puede escanear. Actívalos en los ajustes del teléfono.';
+    } catch (error) {
+      this.error = error instanceof Error ? `No se pudo inicializar Bluetooth: ${error.message}` : 'No se pudieron solicitar los permisos.';
     } finally {
       this.trabajando = false;
     }

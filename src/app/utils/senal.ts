@@ -5,12 +5,20 @@
 import { RSSI_MAX, RSSI_MIN } from '../data/modelos';
 
 export type NivelSenal = 'strong' | 'medium' | 'weak';
+export type DistanciaAproximada = 'Cerca' | 'Medio' | 'Lejos';
 
 /** Fuerte >= -60 dBm, media -60 a -80, débil < -80. (Mismos cortes que el diseño). */
 export function nivelSenal(rssi: number): NivelSenal {
   if (rssi >= -60) return 'strong';
   if (rssi >= -80) return 'medium';
   return 'weak';
+}
+
+/** Clasificación orientativa por intensidad RSSI; no equivale a una distancia en metros. */
+export function distanciaAproximada(rssi: number): DistanciaAproximada {
+  if (rssi >= -60) return 'Cerca';
+  if (rssi >= -80) return 'Medio';
+  return 'Lejos';
 }
 
 /** Cuántas barritas (1 a 4) se encienden. */

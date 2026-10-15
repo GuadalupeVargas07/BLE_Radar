@@ -6,7 +6,13 @@
     <div class="row row--between">
       <div class="stack stack--4">
         <h1 class="title">Radar</h1>
-        <div class="status"><span class="dot"></span>Bluetooth activo</div>
+        <div class="status">
+          <span
+            class="dot"
+            [ngClass]="(estadoBluetooth$ | async) === false ? 'dot--weak' : (estadoBluetooth$ | async) === null ? 'dot--idle' : ''"
+          ></span>
+          {{ (estadoBluetooth$ | async) === false ? 'Bluetooth apagado' : (estadoBluetooth$ | async) === null ? 'Bluetooth sin verificar' : 'Bluetooth activo' }}
+        </div>
       </div>
       <button type="button" class="icon-btn" aria-label="Abrir filtros" (click)="abrirFiltros()">
         <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
@@ -57,9 +63,14 @@
             <i *ngFor="let on of v.barras" [class.on]="on"></i>
           </div>
           <span class="rssi" [ngClass]="'is-' + v.nivel">{{ v.rssiTexto }}</span>
+          <span class="muted" style="font-size: 11px">{{ v.distancia }}</span>
         </div>
       </a>
     </div>
+
+    @if (errorEscaneo$ | async; as error) {
+      <p class="error-text" role="alert">{{ error }}</p>
+    }
 
     <!-- Estados vacíos -->
     <div class="empty" *ngIf="vistas.length === 0 && escaneando && totalDetectados === 0">

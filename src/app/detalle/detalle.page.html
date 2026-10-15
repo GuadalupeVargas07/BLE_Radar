@@ -25,6 +25,7 @@
           <div class="stack stack--2">
             <span class="muted" style="font-size: 12px">Intensidad de señal (RSSI)</span>
             <span class="rssi rssi--xl" [ngClass]="'is-' + vista.nivel">{{ vista.rssiTexto }}</span>
+            <span class="hint">Distancia aproximada: {{ vista.distancia }}</span>
           </div>
           <div class="signal signal--lg" [ngClass]="'is-' + vista.nivel" aria-hidden="true">
             <i *ngFor="let on of vista.barras" [class.on]="on"></i>
@@ -52,6 +53,41 @@
         </div>
         <div class="hint" *ngIf="vista.servicios.length === 0">Este dispositivo no anuncia servicios.</div>
       </div>
+
+      <!-- Lectura GATT: solo se solicitan valores de características legibles. -->
+      <h2 class="section-title">Datos GATT del dispositivo</h2>
+      <p class="hint">La conexión es opcional y el dispositivo puede rechazar algunas lecturas.</p>
+      <button type="button" class="btn" [disabled]="leyendo || !vista.d.conectable" (click)="conectarYLeer()">
+        {{ leyendo ? 'Conectando y leyendo…' : 'Conectar y leer datos' }}
+      </button>
+      @if (errorLectura) {
+        <p class="error-text" role="alert">{{ errorLectura }}</p>
+      }
+      @if (vista.lecturas.length) {
+        <div class="history-list">
+          @for (lectura of vista.lecturas; track lectura.servicio + lectura.caracteristica) {
+            <div class="service">
+              <span class="service__name">
+                {{ describirUuid(lectura.caracteristica).nombre }}
+                <span class="service__uuid">{{ lectura.caracteristica }}</span>
+              </span>
+              <span class="service__uuid">{{ describirUuid(lectura.servicio).nombre }} · {{ lectura.servicio }}</span>
+              @if (lectura.valor) {
+                <span class="service__uuid">{{ lectura.valor }}</span>
+              }
+              @if (lectura.error) {
+                <span class="service__uuid">No se pudo leer: {{ lectura.error }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+      @if (!leyendo && !errorLectura && !lecturaRealizada) {
+        <p class="hint">Conéctate para consultar los valores GATT disponibles.</p>
+      }
+      @if (lecturaRealizada && vista.lecturas.length === 0) {
+        <p class="hint">El dispositivo no anunció características legibles.</p>
+      }
 
       <!-- Guardar -->
       <div class="stack stack--8" style="margin-top: auto; padding-top: 8px">
