@@ -3,5 +3,8 @@
 // The list of file replacements can be found in `angular.json`.
 
 export const environment = {
-  production: false
+  production: false,
+  baseUrl: 'http://TU_IP_LOCAL/ble_radar/api'
 };
+  // Cambia la IP por la IP LAN real de tu laptop
+
