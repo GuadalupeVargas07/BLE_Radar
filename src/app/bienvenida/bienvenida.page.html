@@ -1,0 +1,39 @@
+<!-- BIENVENIDA Y PERMISOS (ruta: /bienvenida) -->
+<ion-content class="ble" [fullscreen]="true">
+  <div class="page welcome">
+
+    <div class="welcome__hero">
+      <div class="radar radar--sm" aria-hidden="true">
+        <div class="radar__ring"></div>
+        <div class="radar__ring radar__ring--inner"></div>
+        <div class="radar__sweep"></div>
+        <div class="radar__me"></div>
+        <span class="radar__dot is-strong" style="left: 71%; top: 31%"></span>
+        <span class="radar__dot is-medium" style="left: 29%; top: 66%"></span>
+      </div>
+      <div class="stack" style="gap: 8px; align-items: center">
+        <h1 class="welcome__title">BLE Radar</h1>
+        <p class="welcome__text">Detecta dispositivos Bluetooth cercanos y registra tus observaciones.</p>
+      </div>
+    </div>
+
+    <div class="stack" style="gap: 10px; margin-bottom: 20px">
+      <div class="permission">
+        <div class="device__icon">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17" /></svg>
+        </div>
+        <div class="stack stack--2"><span class="permission__title">Bluetooth</span><span class="permission__text">Para buscar dispositivos a tu alrededor.</span></div>
+      </div>
+      <div class="permission">
+        <div class="device__icon">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z" /><circle cx="12" cy="10" r="2.5" /></svg>
+        </div>
+        <div class="stack stack--2"><span class="permission__title">Ubicación</span><span class="permission__text">Android la exige para escanear Bluetooth.</span></div>
+      </div>
+    </div>
+
+    <p class="error-text" *ngIf="error" role="alert">{{ error }}</p>
+    <button type="button" class="btn" [disabled]="trabajando" (click)="activar()">{{ trabajando ? 'Solicitando…' : 'Activar permisos' }}</button>
+    <button type="button" class="btn btn--link" (click)="ahoraNo()">Ahora no</button>
+  </div>
+</ion-content>

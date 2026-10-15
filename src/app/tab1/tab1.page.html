@@ -1,17 +1,136 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Tab 1
-    </ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- TAB 1 · RADAR (Inicio) -->
+<ion-content class="ble" [fullscreen]="true">
+  <div class="page">
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 1</ion-title>
-    </ion-toolbar>
-  </ion-header>
+    <!-- Encabezado -->
+    <div class="row row--between">
+      <div class="stack stack--4">
+        <h1 class="title">Radar</h1>
+        <div class="status"><span class="dot"></span>Bluetooth activo</div>
+      </div>
+      <button type="button" class="icon-btn" aria-label="Abrir filtros" (click)="abrirFiltros()">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+          <path d="M4 7h10M18 7h2M4 17h2M10 17h10" /><circle cx="16" cy="7" r="2" /><circle cx="8" cy="17" r="2" />
+        </svg>
+        <span class="icon-btn__badge" *ngIf="filtrosActivos > 0"></span>
+      </button>
+    </div>
 
-  <app-explore-container name="Tab 1 page"></app-explore-container>
+    <!-- Radar -->
+    <div class="radar" role="img" aria-label="Radar de dispositivos Bluetooth cercanos">
+      <div class="radar__ring"></div>
+      <div class="radar__ring radar__ring--inner"></div>
+      <div class="radar__axis radar__axis--v"></div>
+      <div class="radar__axis radar__axis--h"></div>
+      <div class="radar__sweep"></div>
+      <div class="radar__me"></div>
+      <span
+        class="radar__dot"
+        *ngFor="let v of vistas; trackBy: porId"
+        [attr.data-id]="v.d.id"
+        [ngClass]="'is-' + v.nivel"
+        [style.left.%]="v.x"
+        [style.top.%]="v.y"
+      ></span>
+    </div>
+
+    <!-- Contador + estado -->
+    <div class="row row--between">
+      <div class="section-title" style="margin: 0">
+        {{ vistas.length }} {{ vistas.length === 1 ? 'dispositivo encontrado' : 'dispositivos encontrados' }}
+      </div>
+      <span class="badge-scan" [class.is-paused]="!escaneando">{{ escaneando ? 'Escaneando…' : 'En pausa' }}</span>
+    </div>
+
+    <!-- Lista -->
+    <div class="device-list">
+      <a class="device" *ngFor="let v of vistas; trackBy: porId" [attr.data-id]="v.d.id" [routerLink]="['/detalle', v.d.id]">
+        <div class="device__icon">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17" /></svg>
+        </div>
+        <div class="device__info">
+          <span class="device__name" [class.is-unnamed]="!v.d.nombre">{{ v.nombre }}</span>
+          <span class="device__mac">{{ v.d.id }}</span>
+        </div>
+        <div class="device__meta">
+          <div class="signal" [ngClass]="'is-' + v.nivel" aria-hidden="true">
+            <i *ngFor="let on of v.barras" [class.on]="on"></i>
+          </div>
+          <span class="rssi" [ngClass]="'is-' + v.nivel">{{ v.rssiTexto }}</span>
+        </div>
+      </a>
+    </div>
+
+    <!-- Estados vacíos -->
+    <div class="empty" *ngIf="vistas.length === 0 && escaneando && totalDetectados === 0">
+      <span class="empty__title">Buscando dispositivos…</span>
+      Acerca un dispositivo Bluetooth para verlo en el radar.
+    </div>
+    <div class="empty" *ngIf="vistas.length === 0 && totalDetectados > 0">
+      <span class="empty__title">Ningún dispositivo cumple los filtros</span>
+      <button type="button" class="btn btn--small-link" (click)="limpiarFiltros()">Quitar filtros</button>
+    </div>
+
+    <!-- Botón principal (se queda abajo al hacer scroll) -->
+    <div class="sticky-bottom">
+      <button type="button" class="btn" (click)="alternarEscaneo()">
+        <svg *ngIf="escaneando" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2" /></svg>
+        <svg *ngIf="!escaneando" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z" /></svg>
+        {{ escaneando ? 'Detener escaneo' : 'Iniciar escaneo' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- Filtros (bottom sheet). slot="fixed" lo deja encima del contenido sin hacer scroll. -->
+  <div slot="fixed" class="sheet" *ngIf="filtroAbierto" role="dialog" aria-modal="true" aria-label="Filtros del radar">
+    <div class="sheet__overlay" (click)="cerrarFiltros()"></div>
+    <div class="sheet__panel">
+      <div class="sheet__handle"></div>
+
+      <div class="row row--between">
+        <h2 class="title title--md" style="margin: 0">Filtros</h2>
+        <button type="button" class="btn btn--small-link" (click)="limpiarBorrador()">Limpiar</button>
+      </div>
+
+      <div class="stack stack--10">
+        <div class="row row--between">
+          <label class="field__label" for="filtro-rssi">Señal mínima (RSSI)</label>
+          <span class="mono accent">{{ textoRssiMin }}</span>
+        </div>
+        <input
+          id="filtro-rssi" class="range" type="range" min="-100" max="-40" step="1"
+          [value]="borrador.rssiMin" [style.--fill]="relleno(borrador.rssiMin)"
+          (input)="cambiarRssi($event)"
+        />
+        <div class="range-scale"><span>−100</span><span>−40</span></div>
+      </div>
+
+      <div class="field">
+        <label class="field__label" for="filtro-texto">Buscar por nombre o MAC</label>
+        <input
+          id="filtro-texto" class="input" type="text" placeholder="Ej. Mi Band o A4:C1"
+          [value]="borrador.texto" (input)="cambiarTexto($event)"
+        />
+      </div>
+
+      <div class="stack stack--4">
+        <label class="switch-row">
+          <span class="switch-row__title">Solo con nombre</span>
+          <span class="switch">
+            <input type="checkbox" role="switch" [checked]="borrador.soloConNombre" (change)="borrador.soloConNombre = marcado($event)" />
+            <span class="switch__track"></span>
+          </span>
+        </label>
+        <label class="switch-row">
+          <span class="switch-row__title">Solo conectables</span>
+          <span class="switch">
+            <input type="checkbox" role="switch" [checked]="borrador.soloConectables" (change)="borrador.soloConectables = marcado($event)" />
+            <span class="switch__track"></span>
+          </span>
+        </label>
+      </div>
+
+      <button type="button" class="btn" (click)="confirmarFiltros()">Aplicar filtros</button>
+    </div>
+  </div>
 </ion-content>

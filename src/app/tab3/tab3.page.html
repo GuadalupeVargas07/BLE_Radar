@@ -1,17 +1,61 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>
-      Tab 3
-    </ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- TAB 3 · AJUSTES -->
+<ion-content class="ble" [fullscreen]="true">
+  <div class="page" style="gap: 16px">
+    <h1 class="title">Ajustes</h1>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Tab 3</ion-title>
-    </ion-toolbar>
-  </ion-header>
+    <!-- Servidor -->
+    <section class="card">
+      <h2 class="section-title" style="margin: 0">Servidor</h2>
 
-  <app-explore-container name="Tab 3 page"></app-explore-container>
+      <div class="field">
+        <label class="field__label field__label--sm" for="ajuste-url">URL de la API</label>
+        <input
+          id="ajuste-url" class="input input--elevated input--mono" type="url" inputmode="url"
+          autocapitalize="off" autocomplete="off" spellcheck="false"
+          [value]="ajustes.urlApi" (input)="cambiarUrl($event)"
+        />
+      </div>
+
+      <div class="row row--between">
+        <div class="row" style="gap: 8px; font-size: 14px; font-weight: 700" aria-live="polite">
+          <span class="dot dot--lg" [ngClass]="estado.clase"></span>{{ estado.texto }}
+        </div>
+        <span class="mono muted" style="font-size: 12px" *ngIf="ms !== null">{{ ms }} ms</span>
+      </div>
+
+      <button type="button" class="btn btn--outline" [disabled]="probando" (click)="probar()">
+        {{ probando ? 'Probando…' : 'Probar conexión' }}
+      </button>
+    </section>
+
+    <!-- Escaneo -->
+    <section class="card card--tight">
+      <h2 class="section-title" style="margin: 0 0 6px">Escaneo</h2>
+
+      <label class="switch-row">
+        <span class="stack stack--2">
+          <span class="switch-row__title">Guardar automáticamente</span>
+          <span class="switch-row__hint">Registra cada dispositivo nuevo que aparezca.</span>
+        </span>
+        <span class="switch">
+          <input type="checkbox" role="switch" [checked]="ajustes.guardadoAutomatico" (change)="cambiarSwitch('guardadoAutomatico', $event)" />
+          <span class="switch__track"></span>
+        </span>
+      </label>
+
+      <label class="switch-row">
+        <span class="switch-row__title">Mantener pantalla encendida</span>
+        <span class="switch">
+          <input type="checkbox" role="switch" [checked]="ajustes.pantallaEncendida" (change)="cambiarSwitch('pantallaEncendida', $event)" />
+          <span class="switch__track"></span>
+        </span>
+      </label>
+    </section>
+
+    <!-- Versión -->
+    <section class="card card--row">
+      <span class="switch-row__title">Versión de la app</span>
+      <span class="mono muted" style="font-size: 13px">{{ version }}</span>
+    </section>
+  </div>
 </ion-content>

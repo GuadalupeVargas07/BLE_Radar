@@ -1,0 +1,77 @@
+<!-- DETALLE DEL DISPOSITIVO (ruta: /detalle/:id) -->
+<ion-content class="ble" [fullscreen]="true">
+  <div class="page">
+
+    <div class="row">
+      <button type="button" class="icon-btn" aria-label="Volver al radar" (click)="volver()">
+        <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7" /></svg>
+      </button>
+      <h1 class="title title--md">Detalle del dispositivo</h1>
+    </div>
+
+    <ng-container *ngIf="vista; else noEncontrado">
+      <!-- Encabezado -->
+      <div class="card">
+        <div class="row" style="gap: 14px">
+          <div class="device__icon device__icon--lg">
+            <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10-5 5V2l5 5L7 17" /></svg>
+          </div>
+          <div class="stack" style="gap: 3px">
+            <span class="name-lg">{{ vista.nombre }}</span>
+            <span class="mono muted" style="font-size: 12px">{{ vista.d.id }}</span>
+          </div>
+        </div>
+        <div class="row row--between" style="align-items: flex-end">
+          <div class="stack stack--2">
+            <span class="muted" style="font-size: 12px">Intensidad de señal (RSSI)</span>
+            <span class="rssi rssi--xl" [ngClass]="'is-' + vista.nivel">{{ vista.rssiTexto }}</span>
+          </div>
+          <div class="signal signal--lg" [ngClass]="'is-' + vista.nivel" aria-hidden="true">
+            <i *ngFor="let on of vista.barras" [class.on]="on"></i>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos -->
+      <div class="tiles">
+        <div class="tile"><span class="tile__label">Fabricante</span><span class="tile__value">{{ vista.d.fabricante || 'Desconocido' }}</span></div>
+        <div class="tile">
+          <span class="tile__label">Conectable</span>
+          <span class="tile__value" [ngClass]="vista.d.conectable ? 'is-strong' : 'muted'">{{ vista.d.conectable ? 'Sí' : 'No' }}</span>
+        </div>
+        <div class="tile"><span class="tile__label">Servicios anunciados</span><span class="tile__value">{{ vista.servicios.length }}</span></div>
+        <div class="tile"><span class="tile__label">Última vez visto</span><span class="tile__value">{{ vista.visto }}</span></div>
+      </div>
+
+      <!-- Servicios -->
+      <h2 class="section-title">Servicios disponibles</h2>
+      <div class="history-list">
+        <div class="service" *ngFor="let s of vista.servicios">
+          <span class="service__name">{{ s.nombre }}</span>
+          <span class="service__uuid">{{ s.corto }}</span>
+        </div>
+        <div class="hint" *ngIf="vista.servicios.length === 0">Este dispositivo no anuncia servicios.</div>
+      </div>
+
+      <!-- Guardar -->
+      <div class="stack stack--8" style="margin-top: auto; padding-top: 8px">
+        <span class="hint">Se enviará a la API: nombre, MAC, RSSI y fecha.</span>
+        <button type="button" class="btn btn-guardar" [disabled]="guardando" (click)="guardar()">
+          <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+          {{ guardando ? 'Guardando…' : 'Guardar observación' }}
+        </button>
+      </div>
+    </ng-container>
+
+    <ng-template #noEncontrado>
+      <div class="empty">
+        <span class="empty__title">Dispositivo no encontrado</span>
+        Vuelve al radar y elige uno de la lista.
+        <button type="button" class="btn" style="width: auto; padding: 0 24px" (click)="volver()">Volver al radar</button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Aviso (éxito / error) -->
+  <div slot="fixed" class="toast" *ngIf="aviso" [ngClass]="aviso.tipo === 'ok' ? 'is-ok' : 'is-error'" role="status">{{ aviso.texto }}</div>
+</ion-content>

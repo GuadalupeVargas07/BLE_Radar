@@ -1,31 +1,53 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title> Photo Gallery </ion-title>
-  </ion-toolbar>
-</ion-header>
+<!-- TAB 2 · HISTORIAL -->
+<ion-content class="ble" [fullscreen]="true">
+  <div class="page">
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">Photo Gallery</ion-title>
-    </ion-toolbar>
-  </ion-header>
+    <div class="row row--between" style="align-items: baseline">
+      <h1 class="title">Historial</h1>
+      <span class="muted" style="font-size: 13px">{{ total }} {{ total === 1 ? 'observación' : 'observaciones' }}</span>
+    </div>
 
-  <ion-grid>
-    <ion-row>
-      @for (photo of photoService.photos(); track photo.filepath; let position = $index) {
-      <ion-col size="6">
-        <button (click)="showActionSheet(photo, position)">
-          <img [src]="photo.webviewPath" [attr.alt]="'Photo ' + (position + 1)" loading="lazy" />
-        </button>
-      </ion-col>
-      }
-    </ion-row>
-  </ion-grid>
+    <label class="search">
+      <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7" /><path d="M20 20l-4-4" /></svg>
+      <span class="sr-only">Buscar en el historial</span>
+      <input type="search" placeholder="Buscar nombre o MAC" [value]="texto" (input)="buscar($event)" />
+    </label>
 
-  <ion-fab vertical="bottom" horizontal="center" slot="fixed">
-    <ion-fab-button (click)="addPhotoToGallery()">
-      <ion-icon name="camera"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
+    <div class="chips" role="group" aria-label="Rango de fechas">
+      <button
+        type="button" class="chip" *ngFor="let r of rangos"
+        [class.is-active]="r.valor === rango" [attr.aria-pressed]="r.valor === rango"
+        (click)="cambiarRango(r.valor)"
+      >{{ r.texto }}</button>
+    </div>
+
+    <!-- Error -->
+    <div class="empty" *ngIf="error">
+      <span class="empty__title">{{ error }}</span>
+      <button type="button" class="btn btn--outline" style="width: auto; padding: 0 24px" (click)="cargar()">Reintentar</button>
+    </div>
+
+    <!-- Vacío -->
+    <div class="empty" *ngIf="!error && !cargando && total === 0">
+      <span class="empty__title">Aún no hay observaciones</span>
+      Guarda un dispositivo desde su pantalla de detalle y aparecerá aquí.
+    </div>
+
+    <!-- Lista agrupada por día -->
+    <ng-container *ngIf="!error">
+      <ng-container *ngFor="let g of grupos">
+        <div class="group-label">{{ g.etiqueta }}</div>
+        <div class="history-list">
+          <div class="history-item" *ngFor="let o of g.items">
+            <span class="history-item__time">{{ o.hora }}</span>
+            <div class="device__info">
+              <span class="device__name" [class.is-unnamed]="!o.obs.nombre">{{ o.nombre }}</span>
+              <span class="device__mac">{{ o.obs.dispositivoId }}</span>
+            </div>
+            <span class="rssi" [ngClass]="'is-' + o.nivel">{{ o.rssiTexto }}</span>
+          </div>
+        </div>
+      </ng-container>
+    </ng-container>
+  </div>
 </ion-content>
