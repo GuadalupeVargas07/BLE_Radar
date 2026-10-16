@@ -1,4 +1,4 @@
-import { Component, ElementRef, NgZone, inject } from '@angular/core';
+import { Component, ElementRef, NgZone, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonContent } from '@ionic/angular';
 import { animate, stagger } from 'animejs';
@@ -45,6 +45,11 @@ export class Tab2Page {
 
   private pedido = 0; // evita que una respuesta lenta pise a una más reciente
   private espera?: ReturnType<typeof setTimeout>;
+
+  ngOnInit() {
+    // Esto asegura que cargue la primera vez que se renderiza el Tab
+    this.cargar();
+  }
 
   /** Cada vez que se entra a la pestaña se recarga (por si se guardó algo nuevo en Detalle). */
   ionViewWillEnter() {
