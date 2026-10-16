@@ -8,23 +8,54 @@
       <h2 class="section-title" style="margin: 0">Servidor</h2>
 
       <div class="field">
-        <label class="field__label field__label--sm" for="ajuste-url">URL de la API</label>
+        <label class="field__label field__label--sm" for="ajuste-url">Dirección de la API (laptop)</label>
         <input
-          id="ajuste-url" class="input input--elevated input--mono" type="url" inputmode="url"
-          autocapitalize="off" autocomplete="off" spellcheck="false"
-          [value]="ajustes.urlApi" (input)="cambiarUrl($event)"
+          id="ajuste-url" 
+          class="input input--elevated input--mono" 
+          type="url" 
+          inputmode="url"
+          autocapitalize="off" 
+          autocomplete="off" 
+          spellcheck="false"
+          placeholder="http://192.168.1.66/ble_radar/api"
+          [(ngModel)]="apiUrl"
+          (input)="guardarConfiguracion()"
         />
+        <span class="switch-row__hint">
+          Usa la IP de la laptop y el puerto HTTP de Apache (por ejemplo, 80 o 8080). MySQL:3306 se configura en PHP, no aquí.
+        </span>
+        @if (usandoLocalhost) {
+        <span class="error-message" style="color: var(--ion-color-danger, #ff4961); font-size: 12px;">
+          Desde el celular, localhost apunta al propio celular. Sustitúyelo por la IP de la laptop.
+        </span>
+        }
       </div>
 
+      <!-- Estado de la conexión -->
       <div class="row row--between">
         <div class="row" style="gap: 8px; font-size: 14px; font-weight: 700" aria-live="polite">
-          <span class="dot dot--lg" [ngClass]="estado.clase"></span>{{ estado.texto }}
+          <span class="dot dot--lg" [ngClass]="estadoConexion"></span>
+          <ng-container [ngSwitch]="estadoConexion">
+            <span *ngSwitchCase="'sin_probar'">Sin probar</span>
+            <span *ngSwitchCase="'probando'">Probando…</span>
+            <span *ngSwitchCase="'exito'">Conexión exitosa</span>
+            <span *ngSwitchCase="'error'">Error de conexión</span>
+          </ng-container>
         </div>
-        <span class="mono muted" style="font-size: 12px" *ngIf="ms !== null">{{ ms }} ms</span>
       </div>
 
-      <button type="button" class="btn btn--outline" [disabled]="probando" (click)="probar()">
-        {{ probando ? 'Probando…' : 'Probar conexión' }}
+      <!-- Mensaje de error (si ocurre) -->
+      <p *ngIf="mensajeError" class="error-message" style="color: var(--ion-color-danger, #ff4961); font-size: 12px; margin: 4px 0 0;">
+        {{ mensajeError }}
+      </p>
+
+      <!-- Botón para probar la conexión -->
+      <button 
+        type="button" 
+        class="btn btn--outline" 
+        [disabled]="estadoConexion === 'probando'" 
+        (click)="solicitarProbarConexion()">
+        {{ estadoConexion === 'probando' ? 'Probando…' : 'Probar conexión' }}
       </button>
     </section>
 
@@ -38,7 +69,12 @@
           <span class="switch-row__hint">Registra cada dispositivo nuevo que aparezca.</span>
         </span>
         <span class="switch">
-          <input type="checkbox" role="switch" [checked]="ajustes.guardadoAutomatico" (change)="cambiarSwitch('guardadoAutomatico', $event)" />
+          <input 
+            type="checkbox" 
+            role="switch" 
+            [checked]="ajustes.guardadoAutomatico" 
+            (change)="cambiarSwitch('guardadoAutomatico', $event)" 
+          />
           <span class="switch__track"></span>
         </span>
       </label>
@@ -46,7 +82,12 @@
       <label class="switch-row">
         <span class="switch-row__title">Mantener pantalla encendida</span>
         <span class="switch">
-          <input type="checkbox" role="switch" [checked]="ajustes.pantallaEncendida" (change)="cambiarSwitch('pantallaEncendida', $event)" />
+          <input 
+            type="checkbox" 
+            role="switch" 
+            [checked]="ajustes.pantallaEncendida" 
+            (change)="cambiarSwitch('pantallaEncendida', $event)" 
+          />
           <span class="switch__track"></span>
         </span>
       </label>
@@ -57,5 +98,57 @@
       <span class="switch-row__title">Versión de la app</span>
       <span class="mono muted" style="font-size: 13px">{{ version }}</span>
     </section>
+  </div>
+
+  <!-- Modal Neón de Confirmación y Resultado -->
+  <div slot="fixed" class="ble-modal" *ngIf="modalEstado">
+    <div class="ble-modal__backdrop" (click)="estadoConexion !== 'probando' && cerrarModal()"></div>
+    <div class="ble-modal__card" [ngClass]="{'is-success': modalEstado.tipo === 'exito', 'is-error': modalEstado.tipo === 'error'}">
+      <div class="row" style="gap: 12px; align-items: center">
+        <div class="ble-modal__icon-wrap">
+          <!-- Icono Confirmar -->
+          <svg *ngIf="modalEstado.tipo === 'confirmar'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/>
+            <path d="M12 16v-4M12 8h.01"/>
+          </svg>
+          <!-- Icono Éxito -->
+          <svg *ngIf="modalEstado.tipo === 'exito'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+          <!-- Icono Error -->
+          <svg *ngIf="modalEstado.tipo === 'error'" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="15" y1="9" x2="9" y2="15"/>
+            <line x1="9" y1="9" x2="15" y2="15"/>
+          </svg>
+        </div>
+        <h3 class="ble-modal__title">{{ modalEstado.titulo }}</h3>
+      </div>
+
+      <p class="ble-modal__desc">{{ modalEstado.mensaje }}</p>
+
+      <div *ngIf="modalEstado.codigoError" class="row">
+        <span class="ble-modal__code-badge">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Código: {{ modalEstado.codigoError }}
+        </span>
+      </div>
+
+      <div class="ble-modal__actions">
+        <!-- Acciones en Confirmación -->
+        <ng-container *ngIf="modalEstado.tipo === 'confirmar'">
+          <button type="button" class="btn btn--outline" [disabled]="estadoConexion === 'probando'" (click)="cerrarModal()">Cancelar</button>
+          <button type="button" class="btn" [disabled]="estadoConexion === 'probando'" (click)="probarConexion()">
+            {{ estadoConexion === 'probando' ? 'Probando…' : 'Continuar' }}
+          </button>
+        </ng-container>
+
+        <!-- Acciones en Éxito / Error -->
+        <ng-container *ngIf="modalEstado.tipo !== 'confirmar'">
+          <button type="button" class="btn" (click)="cerrarModal()">Aceptar</button>
+        </ng-container>
+      </div>
+    </div>
   </div>
 </ion-content>

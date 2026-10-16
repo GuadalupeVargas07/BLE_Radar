@@ -71,6 +71,10 @@
     @if (errorEscaneo$ | async; as error) {
       <p class="error-text" role="alert">{{ error }}</p>
     }
+    <!-- Agregado el control para error de guardado -->
+    @if (errorGuardado) {
+      <p class="error-text" role="alert">{{ errorGuardado }}</p>
+    }
 
     <!-- Estados vacíos -->
     <div class="empty" *ngIf="vistas.length === 0 && escaneando && totalDetectados === 0">

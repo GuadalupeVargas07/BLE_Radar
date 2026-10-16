@@ -28,7 +28,7 @@ export interface Observacion {
   id: number;
   dispositivoId: string;
   nombre: string | null;
-  rssi: number;
+  rssi: number | null;
   fabricante: string | null;
   conectable: boolean;
   uuids: string[];
@@ -55,7 +55,7 @@ export const FILTROS_POR_DEFECTO: Filtros = {
 
 /** Preferencias de la app (pantalla Ajustes). */
 export interface Ajustes {
-  /** URL base de la API PHP, p. ej. http://192.168.1.10/ble-radar/api */
+  /** URL base HTTP de la API PHP, p. ej. http://192.168.1.10/ble_radar/api */
   urlApi: string;
   /** Registrar automáticamente cada dispositivo nuevo que aparezca. */
   guardadoAutomatico: boolean;
@@ -64,7 +64,7 @@ export interface Ajustes {
 }
 
 export const AJUSTES_POR_DEFECTO: Ajustes = {
-  urlApi: 'http://192.168.1.10/ble-radar/api',
+  urlApi: 'http://192.168.1.10/ble_radar/api',
   guardadoAutomatico: false,
   pantallaEncendida: true,
 };

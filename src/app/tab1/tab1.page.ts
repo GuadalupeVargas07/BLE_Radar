@@ -1,4 +1,4 @@
-import { Component, ElementRef, NgZone, OnDestroy, inject } from '@angular/core';
+import { Component, ElementRef, NgZone, OnDestroy, inject, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { IonContent } from '@ionic/angular';
@@ -40,6 +40,7 @@ export class Tab1Page implements OnDestroy {
   // Inyección de servicios
   public bleService = inject(BleService);
   private escaneo = inject(EscaneoService);
+  private cdr = inject(ChangeDetectorRef);
   readonly estadoBluetooth$ = this.escaneo.estadoBluetooth$;
   readonly errorEscaneo$ = this.escaneo.error$;
   private ajustes = inject(AjustesService);
@@ -48,6 +49,7 @@ export class Tab1Page implements OnDestroy {
   vistas: Vista[] = [];
   totalDetectados = 0;
   escaneando = false;
+  errorGuardado = '';
 
   filtros: Filtros = { ...FILTROS_POR_DEFECTO };
   borrador: Filtros = { ...FILTROS_POR_DEFECTO };
@@ -72,11 +74,16 @@ export class Tab1Page implements OnDestroy {
 
   // ------------------------------------------------------------------ ciclo de vida de Ionic
   async ionViewDidEnter() {
-    this.suscripcion ??= this.escaneo.dispositivos$.subscribe((lista) => this.actualizar(lista));
+    // 1. Aseguramos que cuando lleguen dispositivos, la vista se entere
+    this.suscripcion ??= this.escaneo.dispositivos$.subscribe((lista) => {
+      this.zona.run(() => {
+        this.actualizar(lista);
+        this.cdr.detectChanges(); 
+      });
+    });
     
-    // Esperar medio segundo a que Ionic monte los elementos antes de iniciar animación
-    setTimeout(() => this.iniciarAnimaciones(), 200);
-
+    this.iniciarAnimaciones();
+    
     if (!this.escaneo.escaneando) {
       try {
         await this.escaneo.iniciar();
@@ -84,8 +91,13 @@ export class Tab1Page implements OnDestroy {
         console.error('No se pudo iniciar el escaneo BLE:', error);
       }
     }
-    this.escaneando = this.escaneo.escaneando;
-    if (this.escaneando) this.reanudarAnimaciones();
+    
+    // 2. Forzamos a Angular a repintar el estado exacto al volver a la pantalla
+    this.zona.run(() => {
+      this.escaneando = this.escaneo.escaneando;
+      this.reanudarAnimaciones();
+      this.cdr.detectChanges(); // <-- Esto obliga a actualizar el botón y el texto
+    });
   }
 
   ionViewWillLeave() {
@@ -104,8 +116,6 @@ export class Tab1Page implements OnDestroy {
     try {
       if (this.escaneo.escaneando) {
         await this.escaneo.detener();
-        this.barrido?.pause();
-        this.pulso?.pause();
       } else {
         await this.escaneo.iniciar();
         this.iniciarAnimaciones();
@@ -114,7 +124,10 @@ export class Tab1Page implements OnDestroy {
     } catch (error) {
       console.error('No se pudo cambiar el estado del escaneo BLE:', error);
     } finally {
-      this.escaneando = this.escaneo.escaneando;
+      this.zona.run(() => {
+        this.escaneando = this.escaneo.escaneando;
+        this.cdr.detectChanges(); // <-- Forzamos actualización al presionar el botón
+      });
     }
   }
 
@@ -207,7 +220,16 @@ export class Tab1Page implements OnDestroy {
       for (const d of visibles) {
         if (this.guardados.has(d.id)) continue;
         this.guardados.add(d.id);
-        this.observaciones.guardar(d).catch(() => this.guardados.delete(d.id));
+        this.observaciones.guardar(d).then(
+          () => (this.errorGuardado = ''),
+          (error: unknown) => {
+            // INTEGRACIÓN: Se elimina el dispositivo del set para permitir reintentos futuros
+            this.guardados.delete(d.id);
+            console.error(`No se pudo guardar automáticamente el dispositivo ${d.id}:`, error);
+            
+            this.errorGuardado = error instanceof Error ? error.message : 'No se pudo guardar la observación.';
+          },
+        );
       }
     }
   }

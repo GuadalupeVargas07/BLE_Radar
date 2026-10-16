@@ -4,6 +4,14 @@ const config: CapacitorConfig = {
   appName: "Photo Gallery Cap Ng",
   npmClient: "npm",
   webDir: "www",
+  android: {
+    allowMixedContent: true,
+  },
+  plugins: {
+    CapacitorHttp: {
+      enabled: true,
+    },
+  },
 };
 
 export default config;

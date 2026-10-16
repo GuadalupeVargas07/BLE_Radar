@@ -1,4 +1,4 @@
-import { Component, ElementRef, NgZone, inject } from '@angular/core';
+import { Component, ElementRef, NgZone, inject, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { IonContent } from '@ionic/angular';
 import { animate, stagger } from 'animejs';
@@ -46,6 +46,11 @@ export class Tab2Page {
   private pedido = 0; // evita que una respuesta lenta pise a una más reciente
   private espera?: ReturnType<typeof setTimeout>;
 
+  ngOnInit() {
+    // Esto asegura que cargue la primera vez que se renderiza el Tab
+    this.cargar();
+  }
+
   /** Cada vez que se entra a la pestaña se recarga (por si se guardó algo nuevo en Detalle). */
   ionViewWillEnter() {
     this.cargar();
@@ -71,11 +76,13 @@ export class Tab2Page {
       if (mio !== this.pedido) return;
       this.total = lista.length;
       this.grupos = this.agrupar(lista);
-    } catch {
+    } catch (error) {
       if (mio !== this.pedido) return;
       this.total = 0;
       this.grupos = [];
-      this.error = 'No se pudo cargar el historial.';
+      this.error = error instanceof Error
+        ? `No se pudo cargar el historial: ${error.message}`
+        : 'No se pudo cargar el historial.';
     } finally {
       if (mio === this.pedido) this.cargando = false;
     }
@@ -93,8 +100,8 @@ export class Tab2Page {
         obs: o,
         hora: horaCorta(o.visto),
         nombre: nombreVisible(o.nombre),
-        rssiTexto: formatoRssi(o.rssi),
-        nivel: nivelSenal(o.rssi),
+        rssiTexto: o.rssi === null ? '—' : formatoRssi(o.rssi),
+        nivel: nivelSenal(o.rssi ?? -100),
       });
     }
     return grupos;
