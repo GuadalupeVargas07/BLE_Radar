@@ -42,6 +42,7 @@ export class Tab1Page implements OnDestroy {
   vistas: Vista[] = [];
   totalDetectados = 0;
   escaneando = false;
+  errorGuardado = '';
 
   filtros: Filtros = { ...FILTROS_POR_DEFECTO };
   borrador: Filtros = { ...FILTROS_POR_DEFECTO };
@@ -190,10 +191,16 @@ export class Tab1Page implements OnDestroy {
       for (const d of visibles) {
         if (this.guardados.has(d.id)) continue;
         this.guardados.add(d.id);
-        this.observaciones.guardar(d).catch((error: unknown) => {
-          this.guardados.delete(d.id);
-          console.error(`No se pudo guardar automáticamente el dispositivo ${d.id}:`, error);
-        });
+        this.observaciones.guardar(d).then(
+          () => (this.errorGuardado = ''),
+          (error: unknown) => {
+            // INTEGRACIÓN: Se elimina el dispositivo del set para permitir reintentos futuros
+            this.guardados.delete(d.id);
+            console.error(`No se pudo guardar automáticamente el dispositivo ${d.id}:`, error);
+            
+            this.errorGuardado = error instanceof Error ? error.message : 'No se pudo guardar la observación.';
+          },
+        );
       }
     }
   }

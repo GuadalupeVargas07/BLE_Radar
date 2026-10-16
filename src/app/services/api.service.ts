@@ -27,11 +27,12 @@ export class ApiService {
    */
   async verificarConexion(): Promise<void> {
     const respuesta = await firstValueFrom(
-      this.http.get<{ success?: boolean; error?: string }>(this.urlFor('health.php'))
+      this.http.get<{ success?: boolean; status?: string; error?: string; message?: string }>(this.urlFor('health.php'))
         .pipe(timeout({ first: 8000 }))
     );
-    if (respuesta.success !== true) {
-      throw new Error(respuesta.error || 'La API respondió, pero no confirmó la conexión a MySQL.');
+    const esExitoso = respuesta.success === true || respuesta.status === 'ok';
+    if (!esExitoso) {
+      throw new Error(respuesta.error || respuesta.message || 'La API respondió, pero no confirmó la conexión a MySQL.');
     }
   }
 

@@ -375,4 +375,61 @@ ion-tab-bar.ble-tabbar ion-tab-button ion-label { margin: 0; font-size: 12px; fo
   .permission__title { font-size: 15px; font-weight: 700; }
   .permission__text  { font-size: 13px; color: var(--text-muted); }
   .error-text { font-size: 13px; text-align: center; color: var(--signal-weak); }
+  
+  /* --- Modal BLE Radar Neón --- */
+  .ble-modal {
+    position: fixed; inset: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .ble-modal__backdrop {
+    position: absolute; inset: 0;
+    background: rgba(7, 12, 22, 0.78);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+  }
+  .ble-modal__card {
+    position: relative; z-index: 101; width: 100%; max-width: 360px;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border);
+    border-radius: 20px; padding: 24px 20px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 24px rgba(34, 227, 196, 0.08);
+    display: flex; flex-direction: column; gap: 16px;
+  }
+  .ble-modal__card.is-success {
+    border-color: var(--signal-strong);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px var(--signal-strong-glow);
+  }
+  .ble-modal__card.is-error {
+    border-color: var(--signal-weak);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px var(--signal-weak-glow);
+  }
+  .ble-modal__icon-wrap {
+    width: 48px; height: 48px; border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  .ble-modal__card.is-success .ble-modal__icon-wrap {
+    background: var(--signal-strong-glow); color: var(--signal-strong);
+  }
+  .ble-modal__card.is-error .ble-modal__icon-wrap {
+    background: var(--signal-weak-glow); color: var(--signal-weak);
+  }
+  .ble-modal__title {
+    font-size: 18px; font-weight: 800; color: var(--text); margin: 0;
+  }
+  .ble-modal__desc {
+    font-size: 14px; line-height: 1.45; color: var(--text-muted); margin: 0;
+  }
+  .ble-modal__code-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 10px; border-radius: 8px; font-size: 12px; font-family: var(--font-mono); font-weight: 700;
+    background: rgba(255, 107, 122, 0.12); color: var(--signal-weak); border: 1px solid rgba(255, 107, 122, 0.3);
+  }
+  .ble-modal__actions {
+    display: flex; gap: 10px; margin-top: 6px;
+  }
+  .ble-modal__actions .btn {
+    flex: 1;
+  }
 }

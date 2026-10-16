@@ -72,20 +72,60 @@ export class DetallePage {
     });
   }
 
+  modalEstado?: {
+    tipo: 'confirmar' | 'exito' | 'error';
+    titulo: string;
+    mensaje: string;
+    codigoError?: string | number;
+  };
+
   volver() {
     this.nav.navigateBack('/tabs/tab1');
   }
 
-  async guardar() {
+  /** Abre el modal de confirmación antes de disparar la petición */
+  solicitarGuardar() {
+    if (!this.vista || this.guardando) return;
+    this.modalEstado = {
+      tipo: 'confirmar',
+      titulo: '¿Guardar observación?',
+      mensaje: `Se enviará la información de "${this.vista.nombre}" (${this.vista.d.id}) a la base de datos MySQL mediante la API.`,
+    };
+  }
+
+  cerrarModal() {
+    this.modalEstado = undefined;
+  }
+
+  async confirmarGuardar() {
     if (!this.vista || this.guardando) return;
     this.guardando = true;
+
     try {
       await this.observaciones.guardar(this.vista.d);
-      this.mostrarAviso('Observación guardada', 'ok');
-    } catch (error) {
-      console.error('No se pudo guardar la observación en la API:', error);
-      const detalle = error instanceof Error ? ` ${error.message}` : '';
-      this.mostrarAviso(`No se pudo guardar la observación.${detalle}`, 'error');
+      this.modalEstado = {
+        tipo: 'exito',
+        titulo: '¡Guardado con éxito!',
+        mensaje: 'La observación se registró correctamente en la base de datos (HTTP 201).',
+      };
+    } catch (error: any) {
+      console.error('Error al guardar la observación:', error);
+      let codigo: string | number = 'ERR_CONEXION';
+      let mensaje = 'No se pudo conectar con el servidor API.';
+
+      if (error?.response) {
+        codigo = `HTTP ${error.response.status}`;
+        mensaje = error.response.data?.error || error.response.data?.message || error.message || 'Error en el servidor.';
+      } else if (error instanceof Error) {
+        mensaje = error.message;
+      }
+
+      this.modalEstado = {
+        tipo: 'error',
+        titulo: 'Fallo en la petición',
+        mensaje,
+        codigoError: codigo,
+      };
     } finally {
       this.guardando = false;
     }
