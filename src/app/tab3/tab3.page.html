@@ -8,23 +8,54 @@
       <h2 class="section-title" style="margin: 0">Servidor</h2>
 
       <div class="field">
-        <label class="field__label field__label--sm" for="ajuste-url">URL de la API</label>
+        <label class="field__label field__label--sm" for="ajuste-url">Dirección de la API (laptop)</label>
         <input
-          id="ajuste-url" class="input input--elevated input--mono" type="url" inputmode="url"
-          autocapitalize="off" autocomplete="off" spellcheck="false"
-          [value]="ajustes.urlApi" (input)="cambiarUrl($event)"
+          id="ajuste-url" 
+          class="input input--elevated input--mono" 
+          type="url" 
+          inputmode="url"
+          autocapitalize="off" 
+          autocomplete="off" 
+          spellcheck="false"
+          placeholder="http://192.168.1.66/ble_radar/api"
+          [(ngModel)]="apiUrl"
+          (input)="guardarConfiguracion()"
         />
+        <span class="switch-row__hint">
+          Usa la IP de la laptop y el puerto HTTP de Apache (por ejemplo, 80 o 8080). MySQL:3306 se configura en PHP, no aquí.
+        </span>
+        @if (usandoLocalhost) {
+        <span class="error-message" style="color: var(--ion-color-danger, #ff4961); font-size: 12px;">
+          Desde el celular, localhost apunta al propio celular. Sustitúyelo por la IP de la laptop.
+        </span>
+        }
       </div>
 
+      <!-- Estado de la conexión -->
       <div class="row row--between">
         <div class="row" style="gap: 8px; font-size: 14px; font-weight: 700" aria-live="polite">
-          <span class="dot dot--lg" [ngClass]="estado.clase"></span>{{ estado.texto }}
+          <span class="dot dot--lg" [ngClass]="estadoConexion"></span>
+          <ng-container [ngSwitch]="estadoConexion">
+            <span *ngSwitchCase="'sin_probar'">Sin probar</span>
+            <span *ngSwitchCase="'probando'">Probando…</span>
+            <span *ngSwitchCase="'exito'">Conexión exitosa</span>
+            <span *ngSwitchCase="'error'">Error de conexión</span>
+          </ng-container>
         </div>
-        <span class="mono muted" style="font-size: 12px" *ngIf="ms !== null">{{ ms }} ms</span>
       </div>
 
-      <button type="button" class="btn btn--outline" [disabled]="probando" (click)="probar()">
-        {{ probando ? 'Probando…' : 'Probar conexión' }}
+      <!-- Mensaje de error (si ocurre) -->
+      <p *ngIf="mensajeError" class="error-message" style="color: var(--ion-color-danger, #ff4961); font-size: 12px; margin: 4px 0 0;">
+        {{ mensajeError }}
+      </p>
+
+      <!-- Botón para probar la conexión -->
+      <button 
+        type="button" 
+        class="btn btn--outline" 
+        [disabled]="estadoConexion === 'probando'" 
+        (click)="probarConexion()">
+        {{ estadoConexion === 'probando' ? 'Probando…' : 'Probar conexión' }}
       </button>
     </section>
 
@@ -38,7 +69,12 @@
           <span class="switch-row__hint">Registra cada dispositivo nuevo que aparezca.</span>
         </span>
         <span class="switch">
-          <input type="checkbox" role="switch" [checked]="ajustes.guardadoAutomatico" (change)="cambiarSwitch('guardadoAutomatico', $event)" />
+          <input 
+            type="checkbox" 
+            role="switch" 
+            [checked]="ajustes.guardadoAutomatico" 
+            (change)="cambiarSwitch('guardadoAutomatico', $event)" 
+          />
           <span class="switch__track"></span>
         </span>
       </label>
@@ -46,7 +82,12 @@
       <label class="switch-row">
         <span class="switch-row__title">Mantener pantalla encendida</span>
         <span class="switch">
-          <input type="checkbox" role="switch" [checked]="ajustes.pantallaEncendida" (change)="cambiarSwitch('pantallaEncendida', $event)" />
+          <input 
+            type="checkbox" 
+            role="switch" 
+            [checked]="ajustes.pantallaEncendida" 
+            (change)="cambiarSwitch('pantallaEncendida', $event)" 
+          />
           <span class="switch__track"></span>
         </span>
       </label>

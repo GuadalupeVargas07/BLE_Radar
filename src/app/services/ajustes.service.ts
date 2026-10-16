@@ -1,40 +1,69 @@
 import { Injectable } from '@angular/core';
-import { Ajustes, AJUSTES_POR_DEFECTO } from '../data/modelos';
+import { BehaviorSubject } from 'rxjs';
 
-const CLAVE = 'bleradar:ajustes';
+export interface AjustesApp {
+  urlApi: string;
+  guardadoAutomatico: boolean;
+  pantallaEncendida: boolean;
+}
 
-/**
- * Preferencias de la app guardadas en el dispositivo (localStorage).
- * En el teléfono se puede cambiar a @capacitor/preferences sin tocar las pantallas:
- * solo hay que modificar leer() y guardar().
- */
-@Injectable({ providedIn: 'root' })
+@Injectable({
+  providedIn: 'root'
+})
 export class AjustesService {
-  private actual: Ajustes = this.leer();
+  private defaultUrl = 'http://192.168.1.10/ble_radar/api';
 
-  obtener(): Ajustes {
-    return { ...this.actual };
+  private ajustesState: AjustesApp = {
+    urlApi: (localStorage.getItem('api_url') || this.defaultUrl)
+      .trim()
+      .replace(/\/ble-radar\/api\/?$/i, '/ble_radar/api')
+      .replace(/\/+$/, ''),
+    guardadoAutomatico: localStorage.getItem('guardado_auto') === 'true',
+    pantallaEncendida: localStorage.getItem('pantalla_encendida') === 'true'
+  };
+
+  private apiUrlSubject = new BehaviorSubject<string>(this.ajustesState.urlApi);
+  apiUrl$ = this.apiUrlSubject.asObservable();
+
+  constructor() {}
+
+  /**
+   * Método requerido por Tab1Page y otros componentes
+   */
+  obtener(): AjustesApp {
+    return { ...this.ajustesState };
   }
 
-  cambiar<K extends keyof Ajustes>(clave: K, valor: Ajustes[K]): void {
-    this.actual = { ...this.actual, [clave]: valor };
-    this.guardar();
+  /**
+   * Retorna la URL de la API
+   */
+  getApiUrl(): string {
+    return this.ajustesState.urlApi;
   }
 
-  private leer(): Ajustes {
-    try {
-      const crudo = localStorage.getItem(CLAVE);
-      return crudo ? { ...AJUSTES_POR_DEFECTO, ...JSON.parse(crudo) } : { ...AJUSTES_POR_DEFECTO };
-    } catch {
-      return { ...AJUSTES_POR_DEFECTO };
+  /**
+   * Guarda o actualiza la URL de la API
+   */
+  setApiUrl(url: string): void {
+    const cleanUrl = url.trim().replace(/\/+$/, '');
+    this.ajustesState.urlApi = cleanUrl;
+    localStorage.setItem('api_url', cleanUrl);
+    this.apiUrlSubject.next(cleanUrl);
+  }
+
+  /**
+   * Modifica propiedades opcionales/switches de ajustes
+   */
+  guardar(nuevosAjustes: Partial<AjustesApp>): void {
+    this.ajustesState = { ...this.ajustesState, ...nuevosAjustes };
+    if (nuevosAjustes.urlApi !== undefined) {
+      this.setApiUrl(nuevosAjustes.urlApi);
     }
-  }
-
-  private guardar(): void {
-    try {
-      localStorage.setItem(CLAVE, JSON.stringify(this.actual));
-    } catch {
-      /* almacenamiento no disponible: se ignora */
+    if (nuevosAjustes.guardadoAutomatico !== undefined) {
+      localStorage.setItem('guardado_auto', String(nuevosAjustes.guardadoAutomatico));
+    }
+    if (nuevosAjustes.pantallaEncendida !== undefined) {
+      localStorage.setItem('pantalla_encendida', String(nuevosAjustes.pantallaEncendida));
     }
   }
 }

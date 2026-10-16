@@ -1,150 +1,51 @@
-import { Injectable } from '@angular/core';
-import axios, { AxiosInstance, AxiosError } from 'axios';
-import { environment } from '../../environments/environment';
-
-export interface HealthResponse {
-  success: boolean;
-  data?: {
-    php: string;
-    db: string;
-  };
-  error?: string;
-}
-
-export interface Observacion {
-  id?: number;
-  device_id: string; // MAC o UUID del dispositivo BLE
-  nombre?: string | null;
-  rssi?: number | null; // Nulo si no está disponible
-  nota: string;
-  creado_en?: string;
-}
-
-export interface ApiResponse<T = any> {
-  success: boolean;
-  data?: T;
-  error?: string;
-}
+import { inject, Injectable } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
+import { firstValueFrom, timeout } from 'rxjs';
+import { AjustesService } from './ajustes.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ApiService {
-  private axiosInstance: AxiosInstance;
+  private readonly http = inject(HttpClient);
+  private readonly ajustesService = inject(AjustesService);
 
-  constructor() {
-    this.axiosInstance = axios.create({
-      baseURL: environment.baseUrl,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      timeout: 10000,
-    });
+  /**
+   * Obtiene la URL base activa configurada en AjustesService
+   */
+  private get baseUrl(): string {
+    return this.ajustesService.getApiUrl();
+  }
 
-    // Interceptor para manejar errores formateados según la regla
-    this.axiosInstance.interceptors.response.use(
-      (response) => response,
-      (error: AxiosError<any>) => {
-        const method = error.config?.method?.toUpperCase() || 'DESCONOCIDO';
-        const url = error.config?.url || '';
-        const status = error.response?.status || 'SIN_RESPUESTA';
-        const errorMsg =
-          error.response?.data?.error ||
-          error.message ||
-          'Error de conexión con el servidor';
+  private urlFor(endpoint: string): string {
+    const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+    return `${this.baseUrl}${path}`;
+  }
 
-        console.error(`[API Error] ${method} ${url} | HTTP ${status}: ${errorMsg}`);
-
-        return Promise.reject({
-          success: false,
-          status,
-          method,
-          url,
-          error: `[${method} ${status}] ${errorMsg}`
-        });
-      }
+  /**
+   * Verifica que la API y su conexión a MySQL estén disponibles.
+   */
+  async verificarConexion(): Promise<void> {
+    const respuesta = await firstValueFrom(
+      this.http.get<{ success?: boolean; error?: string }>(this.urlFor('health.php'))
+        .pipe(timeout({ first: 8000 }))
     );
-  }
-
-  /**
-   * GET api/health.php
-   * Revisa el estado de la API y de MySQL
-   */
-  async checkHealth(): Promise<HealthResponse> {
-    try {
-      const response = await this.axiosInstance.get<HealthResponse>('/health.php');
-      return response.data;
-    } catch (error: any) {
-      return error;
+    if (respuesta.success !== true) {
+      throw new Error(respuesta.error || 'La API respondió, pero no confirmó la conexión a MySQL.');
     }
   }
 
   /**
-   * GET api/observaciones.php
-   * Lista todas las observaciones guardadas
+   * Realiza una petición GET a la API configurada en Ajustes.
    */
-  async getObservaciones(): Promise<ApiResponse<Observacion[]>> {
-    try {
-      const response = await this.axiosInstance.get<ApiResponse<Observacion[]>>('/observaciones.php');
-      return response.data;
-    } catch (error: any) {
-      return error;
-    }
+  async get<T>(endpoint: string): Promise<T> {
+    return firstValueFrom(this.http.get<T>(this.urlFor(endpoint)).pipe(timeout({ first: 10000 })));
   }
 
   /**
-   * POST api/observaciones.php
-   * Guarda una observación BLE.
-   * Privacidad BLE: los campos nombre y rssi pueden ser null.
+   * Realiza una petición POST a la API configurada en Ajustes.
    */
-  async createObservacion(obs: Observacion): Promise<ApiResponse<{ id: number }>> {
-    try {
-      const payload = {
-        device_id: obs.device_id,
-        nombre: obs.nombre ?? null,
-        rssi: obs.rssi ?? null,
-        nota: obs.nota || ''
-      };
-
-      const response = await this.axiosInstance.post<ApiResponse<{ id: number }>>(
-        '/observaciones.php',
-        payload
-      );
-      return response.data;
-    } catch (error: any) {
-      return error;
-    }
-  }
-
-  /**
-   * Subida de archivos (Fotos / Audios) usando FormData
-   * - Restringe a máximo 8 MB.
-   * - Muestra errores legibles.
-   */
-
-  async uploadFile(file: File, endpoint: string = '/upload.php'): Promise<ApiResponse> {
-    const MAX_SIZE_MB = 8;
-    const MAX_SIZE_BYTES = MAX_SIZE_MB * 1024 * 1024;
-
-    if (file.size > MAX_SIZE_BYTES) {
-      return {
-        success: false,
-        error: `El archivo supera el límite permitido de ${MAX_SIZE_MB} MB.`
-      };
-    }
-
-    const formData = new FormData();
-    formData.append('archivo', file);
-
-    try {
-      const response = await this.axiosInstance.post<ApiResponse>(endpoint, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      return response.data;
-    } catch (error: any) {
-      return error;
-    }
+  async post<T>(endpoint: string, body: unknown): Promise<T> {
+    return firstValueFrom(this.http.post<T>(this.urlFor(endpoint), body).pipe(timeout({ first: 10000 })));
   }
 }

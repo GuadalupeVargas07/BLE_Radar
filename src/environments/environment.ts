@@ -4,7 +4,4 @@
 
 export const environment = {
   production: false,
-  baseUrl: 'http://TU_IP_LOCAL/ble_radar/api'
 };
-  // Cambia la IP por la IP LAN real de tu laptop
-

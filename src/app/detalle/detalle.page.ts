@@ -82,8 +82,10 @@ export class DetallePage {
     try {
       await this.observaciones.guardar(this.vista.d);
       this.mostrarAviso('Observación guardada', 'ok');
-    } catch {
-      this.mostrarAviso('No se pudo guardar. Revisa la conexión con el servidor.', 'error');
+    } catch (error) {
+      console.error('No se pudo guardar la observación en la API:', error);
+      const detalle = error instanceof Error ? ` ${error.message}` : '';
+      this.mostrarAviso(`No se pudo guardar la observación.${detalle}`, 'error');
     } finally {
       this.guardando = false;
     }

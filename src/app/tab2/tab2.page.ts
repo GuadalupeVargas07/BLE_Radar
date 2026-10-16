@@ -71,11 +71,13 @@ export class Tab2Page {
       if (mio !== this.pedido) return;
       this.total = lista.length;
       this.grupos = this.agrupar(lista);
-    } catch {
+    } catch (error) {
       if (mio !== this.pedido) return;
       this.total = 0;
       this.grupos = [];
-      this.error = 'No se pudo cargar el historial.';
+      this.error = error instanceof Error
+        ? `No se pudo cargar el historial: ${error.message}`
+        : 'No se pudo cargar el historial.';
     } finally {
       if (mio === this.pedido) this.cargando = false;
     }
@@ -93,8 +95,8 @@ export class Tab2Page {
         obs: o,
         hora: horaCorta(o.visto),
         nombre: nombreVisible(o.nombre),
-        rssiTexto: formatoRssi(o.rssi),
-        nivel: nivelSenal(o.rssi),
+        rssiTexto: o.rssi === null ? '—' : formatoRssi(o.rssi),
+        nivel: nivelSenal(o.rssi ?? -100),
       });
     }
     return grupos;

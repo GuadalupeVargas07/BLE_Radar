@@ -190,7 +190,10 @@ export class Tab1Page implements OnDestroy {
       for (const d of visibles) {
         if (this.guardados.has(d.id)) continue;
         this.guardados.add(d.id);
-        this.observaciones.guardar(d).catch(() => this.guardados.delete(d.id));
+        this.observaciones.guardar(d).catch((error: unknown) => {
+          this.guardados.delete(d.id);
+          console.error(`No se pudo guardar automáticamente el dispositivo ${d.id}:`, error);
+        });
       }
     }
   }
