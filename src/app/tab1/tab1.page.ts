@@ -5,6 +5,9 @@ import { IonContent } from '@ionic/angular';
 import { Subscription } from 'rxjs';
 import { animate, stagger } from 'animejs';
 
+// Servicio nativo del Radar BLE (Área 2 - Jay)
+import { BleService } from '../services/ble.service';
+
 import { Dispositivo, Filtros, FILTROS_POR_DEFECTO, RSSI_MIN } from '../data/modelos';
 import { EscaneoService } from '../services/escaneo.service';
 import { AjustesService } from '../services/ajustes.service';
@@ -33,6 +36,9 @@ interface Vista {
 export class Tab1Page implements OnDestroy {
   private host = inject<ElementRef<HTMLElement>>(ElementRef);
   private zona = inject(NgZone);
+
+  // Inyección de servicios
+  public bleService = inject(BleService);
   private escaneo = inject(EscaneoService);
   readonly estadoBluetooth$ = this.escaneo.estadoBluetooth$;
   readonly errorEscaneo$ = this.escaneo.error$;
@@ -67,7 +73,10 @@ export class Tab1Page implements OnDestroy {
   // ------------------------------------------------------------------ ciclo de vida de Ionic
   async ionViewDidEnter() {
     this.suscripcion ??= this.escaneo.dispositivos$.subscribe((lista) => this.actualizar(lista));
-    this.iniciarAnimaciones();
+    
+    // Esperar medio segundo a que Ionic monte los elementos antes de iniciar animación
+    setTimeout(() => this.iniciarAnimaciones(), 200);
+
     if (!this.escaneo.escaneando) {
       try {
         await this.escaneo.iniciar();
@@ -90,7 +99,7 @@ export class Tab1Page implements OnDestroy {
     this.pulso?.pause();
   }
 
-  // ------------------------------------------------------------------ acciones
+  // ------------------------------------------------------------------ acciones del radar
   async alternarEscaneo() {
     try {
       if (this.escaneo.escaneando) {
@@ -99,6 +108,7 @@ export class Tab1Page implements OnDestroy {
         this.pulso?.pause();
       } else {
         await this.escaneo.iniciar();
+        this.iniciarAnimaciones();
         this.reanudarAnimaciones();
       }
     } catch (error) {
@@ -106,6 +116,10 @@ export class Tab1Page implements OnDestroy {
     } finally {
       this.escaneando = this.escaneo.escaneando;
     }
+  }
+
+  escanear() {
+    return this.alternarEscaneo();
   }
 
   limpiarFiltros() {
@@ -119,19 +133,24 @@ export class Tab1Page implements OnDestroy {
     this.filtroAbierto = true;
     setTimeout(() => {
       const el = this.host.nativeElement;
+      const overlay = el.querySelector('.sheet__overlay');
+      const panel = el.querySelector('.sheet__panel');
+      if (!overlay || !panel) return;
+
       this.fuera(() => {
-        animate(el.querySelector('.sheet__overlay')!, { opacity: [0, 1], duration: 250, ease: 'linear' });
-        animate(el.querySelector('.sheet__panel')!, { translateY: ['100%', '0%'], duration: 350, ease: 'outCubic' });
+        animate(overlay, { opacity: [0, 1], duration: 250, ease: 'linear' });
+        animate(panel, { translateY: ['100%', '0%'], duration: 350, ease: 'outCubic' });
       });
-    });
+    }, 50);
   }
 
   cerrarFiltros() {
     const el = this.host.nativeElement;
+    const overlay = el.querySelector('.sheet__overlay');
     const panel = el.querySelector('.sheet__panel');
     if (!panel) return;
     this.fuera(() => {
-      animate(el.querySelector('.sheet__overlay')!, { opacity: [1, 0], duration: 200, ease: 'linear' });
+      if (overlay) animate(overlay, { opacity: [1, 0], duration: 200, ease: 'linear' });
       animate(panel, {
         translateY: ['0%', '100%'],
         duration: 250,
@@ -180,12 +199,10 @@ export class Tab1Page implements OnDestroy {
       };
     });
 
-    // Dispositivos que aparecen por primera vez → animación de entrada
     const nuevos = this.vistas.filter((v) => !this.conocidos.has(v.d.id)).map((v) => v.d.id);
     this.conocidos = new Set(this.vistas.map((v) => v.d.id));
     if (nuevos.length) setTimeout(() => this.animarEntrada(nuevos));
 
-    // Guardado automático (Ajustes): una vez por dispositivo y sesión
     if (this.ajustes.obtener().guardadoAutomatico) {
       for (const d of visibles) {
         if (this.guardados.has(d.id)) continue;
@@ -199,16 +216,20 @@ export class Tab1Page implements OnDestroy {
   private iniciarAnimaciones() {
     if (this.barrido) return;
     const el = this.host.nativeElement;
+    const sweep = el.querySelector('.radar__sweep');
+    const me = el.querySelector('.radar__me');
+
+    // Validación de seguridad para que animejs no congele Angular si faltan elementos
+    if (!sweep || !me) return;
+
     this.fuera(() => {
-      // El barrido del radar gira sin parar mientras se escanea
-      this.barrido = animate(el.querySelector('.radar__sweep')!, {
+      this.barrido = animate(sweep, {
         rotate: 360,
         duration: 4000,
         ease: 'linear',
         loop: true,
       });
-      // Latido del punto central
-      this.pulso = animate(el.querySelector('.radar__me')!, {
+      this.pulso = animate(me, {
         scale: [1, 1.3],
         opacity: [1, 0.7],
         duration: 1100,
@@ -224,7 +245,6 @@ export class Tab1Page implements OnDestroy {
     this.pulso?.resume();
   }
 
-  /** Aparición escalonada de los puntos del radar y de las tarjetas nuevas. */
   private animarEntrada(ids: string[]) {
     const todos = Array.from(this.host.nativeElement.querySelectorAll<HTMLElement>('[data-id]'));
     const nuevos = todos.filter((e) => ids.includes(e.dataset['id'] ?? ''));
@@ -236,7 +256,6 @@ export class Tab1Page implements OnDestroy {
     });
   }
 
-  /** Corre fuera de la zona de Angular para que las animaciones no disparen detección de cambios en cada fotograma. */
   private fuera(fn: () => void) {
     this.zona.runOutsideAngular(fn);
   }

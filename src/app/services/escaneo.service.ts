@@ -19,7 +19,7 @@ export class EscaneoService {
   private escaneoIniciado = false;
 
   readonly dispositivos$ = new BehaviorSubject<Dispositivo[]>([]);
-  private readonly estadoBluetoothSubject = new BehaviorSubject<boolean | null>(null);
+  private readonly estadoBluetoothSubject = new BehaviorSubject<boolean | null>(true);
   readonly estadoBluetooth$ = this.estadoBluetoothSubject.asObservable();
   private readonly errorSubject = new BehaviorSubject<string | null>(null);
   readonly error$ = this.errorSubject.asObservable();
@@ -44,13 +44,29 @@ export class EscaneoService {
 
     try {
       await this.inicializar();
-      const activo = await BleClient.isEnabled();
+      let activo = await BleClient.isEnabled();
+      if (!activo) {
+        try {
+          await BleClient.requestEnable();
+          activo = await BleClient.isEnabled();
+        } catch {
+          // Si el usuario cancela la activación
+        }
+      }
       this.publicarEstadoBluetooth(activo);
-      if (!activo) throw new Error('Bluetooth está apagado. Actívalo para iniciar el escaneo.');
+
+      if (!activo) {
+        throw new Error('Bluetooth está apagado. Actívalo para iniciar el escaneo.');
+      }
 
       this.mapa.clear();
       this.publicar();
-      await BleClient.requestLEScan({ allowDuplicates: true }, (resultado) => this.procesarResultado(resultado));
+
+      await BleClient.requestLEScan(
+        { allowDuplicates: true },
+        (resultado) => this.procesarResultado(resultado)
+      );
+
       this.escaneoIniciado = true;
       this.escaneando = true;
     } catch (error) {
@@ -128,14 +144,20 @@ export class EscaneoService {
   private async inicializar(): Promise<void> {
     if (!this.inicializando) {
       this.inicializando = (async () => {
-        await BleClient.initialize({ androidNeverForLocation: false });
+        // CORREGIDO: androidNeverForLocation en true para que coincida con tu AndroidManifest.xml
+        await BleClient.initialize({ androidNeverForLocation: true });
+
         await BleClient.startEnabledNotifications((activo) => {
           this.zona.run(() => this.publicarEstadoBluetooth(activo));
           if (!activo && this.escaneoIniciado) {
-            void this.detener().catch((error: unknown) => this.publicarError(error, 'Bluetooth se apagó durante el escaneo'));
+            void this.detener().catch((error: unknown) =>
+              this.publicarError(error, 'Bluetooth se apagó durante el escaneo')
+            );
           }
         });
-        this.publicarEstadoBluetooth(await BleClient.isEnabled());
+
+        const inicial = await BleClient.isEnabled();
+        this.zona.run(() => this.publicarEstadoBluetooth(inicial));
       })().catch((error: unknown) => {
         this.inicializando = undefined;
         throw error;
@@ -198,7 +220,6 @@ export class EscaneoService {
     ).join(' ');
   }
 
-  /** Alta o actualización explícita de un dispositivo detectado. */
   registrar(dispositivo: Dispositivo): void {
     this.mapa.set(dispositivo.id, dispositivo);
     this.publicar();
